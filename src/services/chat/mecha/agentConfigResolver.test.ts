@@ -48,6 +48,31 @@ describe('resolveAgentConfig', () => {
       expect(result.isBuiltinAgent).toBe(false);
     });
 
+    it('should treat agent with non-builtin slug as regular agent', () => {
+      // Agent has a random slug that is NOT a valid builtin agent slug
+      vi.spyOn(agentSelectors.agentSelectors, 'getAgentSlugById').mockReturnValue(
+        () => 'sister-religious-mostly-effort',
+      );
+
+      const result = resolveAgentConfig({ agentId: 'test-agent' });
+
+      expect(result.isBuiltinAgent).toBe(false);
+      expect(result.slug).toBeUndefined();
+      expect(result.plugins).toEqual(['plugin-a', 'plugin-b']);
+    });
+
+    it('should treat agent with random slug as regular agent', () => {
+      // Another example of random/custom slug
+      vi.spyOn(agentSelectors.agentSelectors, 'getAgentSlugById').mockReturnValue(
+        () => 'my-custom-agent-slug',
+      );
+
+      const result = resolveAgentConfig({ agentId: 'test-agent' });
+
+      expect(result.isBuiltinAgent).toBe(false);
+      expect(result.slug).toBeUndefined();
+    });
+
     it('should return empty array when agent config has no plugins', () => {
       vi.spyOn(agentSelectors.agentSelectors, 'getAgentConfigById').mockReturnValue(
         () =>
@@ -444,6 +469,49 @@ describe('resolveAgentConfig', () => {
         expect(result.plugins).toContain(NotebookIdentifier);
         expect(result.plugins).toContain('user-plugin');
       });
+
+      it('should use basePlugins from agentConfig when ctx.plugins is not provided', () => {
+        // This test verifies the fix for the issue where INBOX agent lost user-configured plugins
+        // when resolveAgentConfig was called without the plugins parameter.
+        // The runtime function should receive basePlugins (from agentConfig) as fallback.
+        const userConfiguredPlugins = ['web-search', 'memory', 'custom-tool'];
+
+        vi.spyOn(agentSelectors.agentSelectors, 'getAgentConfigById').mockReturnValue(
+          () =>
+            ({
+              ...mockAgentConfig,
+              plugins: userConfiguredPlugins,
+            }) as any,
+        );
+
+        // Simulate INBOX runtime behavior: merges builtin tools with ctx.plugins
+        const getAgentRuntimeConfigSpy = vi
+          .spyOn(builtinAgents, 'getAgentRuntimeConfig')
+          .mockImplementation((slug, ctx) => ({
+            // This simulates the actual INBOX runtime: [GTDIdentifier, NotebookIdentifier, ...(ctx.plugins || [])]
+            plugins: [GTDIdentifier, NotebookIdentifier, ...(ctx.plugins || [])],
+            systemRole: 'Inbox system role',
+          }));
+
+        // Call WITHOUT plugins parameter - this is how internal_createAgentState calls it
+        const result = resolveAgentConfig({ agentId: 'inbox-agent' });
+
+        // Verify getAgentRuntimeConfig received basePlugins as fallback
+        expect(getAgentRuntimeConfigSpy).toHaveBeenCalledWith(
+          'inbox',
+          expect.objectContaining({
+            plugins: userConfiguredPlugins,
+          }),
+        );
+
+        // Verify final plugins include both builtin tools AND user-configured plugins
+        expect(result.plugins).toContain(GTDIdentifier);
+        expect(result.plugins).toContain(NotebookIdentifier);
+        expect(result.plugins).toContain('web-search');
+        expect(result.plugins).toContain('memory');
+        expect(result.plugins).toContain('custom-tool');
+        expect(result.plugins).toHaveLength(5); // 2 builtin + 3 user plugins
+      });
     });
   });
 
@@ -625,6 +693,29 @@ describe('resolveAgentConfig', () => {
       expect(result.agentConfig.systemRole.trim()).toBe('You are a helpful assistant');
       expect(result.chatConfig.enableHistoryCount).toBe(false);
     });
+
+    it('should not duplicate injection when page-agent itself is used in page scope', () => {
+      // page-agent is a builtin agent with slug 'page-agent'
+      vi.spyOn(agentSelectors.agentSelectors, 'getAgentSlugById').mockReturnValue(
+        () => 'page-agent',
+      );
+
+      vi.spyOn(builtinAgents, 'getAgentRuntimeConfig').mockReturnValue({
+        plugins: [PageAgentIdentifier],
+        systemRole: 'Page agent system prompt',
+      });
+
+      const result = resolveAgentConfig({
+        agentId: 'page-agent-id',
+        scope: 'page',
+      });
+
+      // page-agent should NOT have its tools/systemRole injected again
+      expect(result.plugins.filter((p) => p === PageAgentIdentifier)).toHaveLength(1);
+      expect(result.agentConfig.systemRole).toBe('Page agent system prompt');
+      expect(result.isBuiltinAgent).toBe(true);
+      expect(result.slug).toBe('page-agent');
+    });
   });
 
   describe('supervisor agent (detected via groupId)', () => {
@@ -652,13 +743,11 @@ describe('resolveAgentConfig', () => {
     });
 
     describe('supervisor with own slug (priority check)', () => {
-      // This tests the fix for LOBE-4127: When supervisor agent has its own slug,
-      // it should still use 'group-supervisor' slug when in group scope
-
+      // When supervisor agent has its own slug, it should still use 'group-supervisor' slug when in group scope
       it('should use group-supervisor slug even when agent has its own slug in group scope', () => {
         // Supervisor agent has its own slug (e.g., from being a builtin agent)
         vi.spyOn(agentSelectors.agentSelectors, 'getAgentSlugById').mockReturnValue(
-          () => 'some-agent-slug',
+          () => 'agent-builder',
         );
 
         // Mock: groupById returns the group
@@ -690,54 +779,6 @@ describe('resolveAgentConfig', () => {
         expect(result.isBuiltinAgent).toBe(true);
         expect(result.slug).toBe('group-supervisor');
         expect(result.plugins).toContain(GroupManagementIdentifier);
-      });
-
-      it('should use agent own slug when scope is not group', () => {
-        // Supervisor agent has its own slug
-        vi.spyOn(agentSelectors.agentSelectors, 'getAgentSlugById').mockReturnValue(
-          () => 'some-agent-slug',
-        );
-
-        // Mock: groupById returns the group
-        vi.spyOn(agentGroupSelectors.agentGroupByIdSelectors, 'groupById').mockReturnValue(
-          () => mockGroupWithSupervisor as any,
-        );
-
-        vi.spyOn(builtinAgents, 'getAgentRuntimeConfig').mockReturnValue({
-          plugins: ['agent-specific-plugin'],
-          systemRole: 'Agent specific system role',
-        });
-
-        const result = resolveAgentConfig({
-          agentId: 'supervisor-agent-id',
-          groupId: 'group-123',
-          scope: 'main', // Not 'group' scope
-        });
-
-        // Should use agent's own slug since scope is not 'group'
-        expect(result.isBuiltinAgent).toBe(true);
-        expect(result.slug).toBe('some-agent-slug');
-      });
-
-      it('should use agent own slug when groupId is not provided', () => {
-        // Supervisor agent has its own slug
-        vi.spyOn(agentSelectors.agentSelectors, 'getAgentSlugById').mockReturnValue(
-          () => 'some-agent-slug',
-        );
-
-        vi.spyOn(builtinAgents, 'getAgentRuntimeConfig').mockReturnValue({
-          plugins: ['agent-specific-plugin'],
-          systemRole: 'Agent specific system role',
-        });
-
-        const result = resolveAgentConfig({
-          agentId: 'supervisor-agent-id',
-          scope: 'group', // Even with group scope, no groupId
-        });
-
-        // Should use agent's own slug since no groupId
-        expect(result.isBuiltinAgent).toBe(true);
-        expect(result.slug).toBe('some-agent-slug');
       });
     });
 
@@ -827,6 +868,25 @@ describe('resolveAgentConfig', () => {
       expect(result.isBuiltinAgent).toBe(false);
       expect(result.slug).toBeUndefined();
       expect(result.plugins).toEqual(['plugin-a', 'plugin-b']); // Falls back to agent config plugins
+    });
+
+    it('should treat as regular agent when scope is not group even with groupId', () => {
+      // Mock: groupById returns the group (supervisor agent exists)
+      vi.spyOn(agentGroupSelectors.agentGroupByIdSelectors, 'groupById').mockReturnValue(
+        () => mockGroupWithSupervisor as any,
+      );
+
+      // groupId is provided but scope is 'main', not 'group'
+      const result = resolveAgentConfig({
+        agentId: 'supervisor-agent-id',
+        groupId: 'group-123',
+        scope: 'main', // Not 'group' scope
+      });
+
+      // Should NOT be identified as group-supervisor because scope !== 'group'
+      expect(result.isBuiltinAgent).toBe(false);
+      expect(result.slug).toBeUndefined();
+      expect(result.plugins).toEqual(['plugin-a', 'plugin-b']);
     });
 
     it('should treat as regular agent when agentId does not match group supervisorAgentId', () => {
@@ -973,7 +1033,7 @@ describe('resolveAgentConfig', () => {
 
     it('should filter lobe-gtd for builtin agent when isSubTask is true', () => {
       vi.spyOn(agentSelectors.agentSelectors, 'getAgentSlugById').mockReturnValue(
-        () => 'some-builtin-slug',
+        () => 'agent-builder',
       );
       vi.spyOn(builtinAgents, 'getAgentRuntimeConfig').mockReturnValue({
         plugins: ['lobe-gtd', 'runtime-plugin'],
@@ -991,7 +1051,7 @@ describe('resolveAgentConfig', () => {
 
     it('should keep lobe-gtd for builtin agent when isSubTask is false', () => {
       vi.spyOn(agentSelectors.agentSelectors, 'getAgentSlugById').mockReturnValue(
-        () => 'some-builtin-slug',
+        () => 'agent-builder',
       );
       vi.spyOn(builtinAgents, 'getAgentRuntimeConfig').mockReturnValue({
         plugins: ['lobe-gtd', 'runtime-plugin'],
@@ -1046,7 +1106,7 @@ describe('resolveAgentConfig', () => {
 
     it('should return empty plugins for builtin agent when disableTools is true', () => {
       vi.spyOn(agentSelectors.agentSelectors, 'getAgentSlugById').mockReturnValue(
-        () => 'some-builtin-slug',
+        () => 'agent-builder',
       );
       vi.spyOn(builtinAgents, 'getAgentRuntimeConfig').mockReturnValue({
         plugins: ['runtime-plugin-1', 'runtime-plugin-2'],

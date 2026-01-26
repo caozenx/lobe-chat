@@ -1,6 +1,12 @@
-import { BUILTIN_AGENT_SLUGS, getAgentRuntimeConfig } from '@lobechat/builtin-agents';
-import { PageAgentIdentifier } from '@lobechat/builtin-tool-page-agent';
 import {
+  BUILTIN_AGENT_SLUGS,
+  type BuiltinAgentSlug,
+  getAgentRuntimeConfig,
+} from '@lobechat/builtin-agents';
+import { PageAgentIdentifier } from '@lobechat/builtin-tool-page-agent';
+import type { LobeToolManifest } from '@lobechat/context-engine';
+import {
+  type ChatCompletionTool,
   type LobeAgentChatConfig,
   type LobeAgentConfig,
   type MessageMapScope,
@@ -14,6 +20,18 @@ import { getChatGroupStoreState } from '@/store/agentGroup';
 import { agentGroupByIdSelectors, agentGroupSelectors } from '@/store/agentGroup/selectors';
 
 const log = debug('mecha:agentConfigResolver');
+
+/**
+ * Set of valid builtin agent slugs for O(1) lookup
+ */
+const VALID_BUILTIN_SLUGS = new Set<string>(Object.values(BUILTIN_AGENT_SLUGS));
+
+/**
+ * Check if a slug is a valid builtin agent slug
+ */
+const isBuiltinAgentSlug = (slug: string): slug is BuiltinAgentSlug => {
+  return VALID_BUILTIN_SLUGS.has(slug);
+};
 
 /**
  * Applies params adjustments based on chatConfig settings.
@@ -95,6 +113,10 @@ export interface ResolvedAgentConfig {
   agentConfig: LobeAgentConfig;
   /** The chat config */
   chatConfig: LobeAgentChatConfig;
+  /** Enabled manifests for context engineering (populated by internal_createAgentState) */
+  enabledManifests?: LobeToolManifest[];
+  /** Enabled tool IDs after filtering (populated by internal_createAgentState) */
+  enabledToolIds?: string[];
   /** Whether this is a builtin agent */
   isBuiltinAgent: boolean;
   /**
@@ -105,6 +127,8 @@ export interface ResolvedAgentConfig {
   plugins: string[];
   /** The agent's slug (if builtin) */
   slug?: string;
+  /** Pre-generated tools array (populated by internal_createAgentState, undefined means tools disabled) */
+  tools?: ChatCompletionTool[];
 }
 
 /**
@@ -187,12 +211,20 @@ export const resolveAgentConfig = (ctx: AgentConfigResolverContext): ResolvedAge
 
   // If not identified as supervisor, check agent store for slug
   if (!slug) {
-    slug = agentSelectors.getAgentSlugById(agentId)(agentStoreState) ?? undefined;
-    log('slug from agentStore: %s (agentId: %s)', slug, agentId);
+    const storeSlug = agentSelectors.getAgentSlugById(agentId)(agentStoreState) ?? undefined;
+    log('slug from agentStore: %s (agentId: %s)', storeSlug, agentId);
+
+    // Only use the slug if it's a valid builtin agent slug
+    // Regular agents may have random slugs that should be ignored
+    if (storeSlug && isBuiltinAgentSlug(storeSlug)) {
+      slug = storeSlug;
+    } else if (storeSlug) {
+      log('slug %s is not a valid builtin agent slug, treating as regular agent', storeSlug);
+    }
   }
 
   if (!slug) {
-    log('agentId %s is not a builtin agent (no slug found)', agentId);
+    log('agentId %s is not a builtin agent (no valid builtin slug found)', agentId);
     // Regular agent - use provided plugins if available, fallback to agent's plugins
     const finalPlugins = plugins && plugins.length > 0 ? plugins : basePlugins;
 
@@ -297,11 +329,13 @@ export const resolveAgentConfig = (ctx: AgentConfigResolverContext): ResolvedAge
   }
 
   // Builtin agent - merge runtime config
+  // Use basePlugins as fallback when ctx.plugins is not provided
+  // This ensures builtin agents (e.g., INBOX) receive user-configured plugins for merging
   const runtimeConfig = getAgentRuntimeConfig(slug, {
     documentContent,
     groupSupervisorContext,
     model,
-    plugins,
+    plugins: plugins || basePlugins,
     targetAgentConfig,
   });
 

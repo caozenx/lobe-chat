@@ -22,15 +22,15 @@ tags:
   - **务必先备份数据库**！如使用 Neon，可通过 [Fork 分支](https://neon.tech/docs/manage/branches#create-a-branch) 创建备份
   - 迁移过程中可能出现的任何数据丢失或问题，LobeChat 概不负责
   - 本指南适合有一定开发背景的用户，不建议无技术经验的用户自行操作
-  - 如有任何疑问，欢迎到 [Discord](https://discord.com/invite/AYFPHvv2jT) 社区提问
+  - 如有任何疑问，欢迎到 [Discord](https://discord.com/invite/AYFPHvv2jT) 社区或 [GitHub Issue](https://github.com/lobehub/lobe-chat/issues/11707) 提问
 </Callout>
 
 ## 选择迁移方式
 
-| 方式            | 适用场景            | 用户影响    | 数据保留     |
-| ------------- | --------------- | ------- | -------- |
-| [简单迁移](#简单迁移) | 小型部署（\< 100 用户） | 用户需重置密码 | 聊天记录、设置  |
-| [完整迁移](#完整迁移) | 大型部署            | 对用户无感知  | 全部数据包括密码 |
+| 方式            | 适用场景          | 用户影响    | 数据保留     |
+| ------------- | ------------- | ------- | -------- |
+| [简单迁移](#简单迁移) | 小型部署（≤ 10 用户） | 用户需重置密码 | 聊天记录、设置  |
+| [完整迁移](#完整迁移) | 大型部署          | 对用户无感知  | 全部数据包括密码 |
 
 ## 简单迁移
 
@@ -39,12 +39,14 @@ tags:
 <Callout type={'warning'}>
   **限制**：此方法会丢失 SSO 连接数据。如需保留 SSO 连接，请使用 [完整迁移](#完整迁移)。
 
+  虽然 SSO 连接会丢失，但用户可以在使用邮箱密码登录后，通过个人资料页手动重新绑定社交账号。
+
   **示例场景**：假设你之前的账户绑定了两个 SSO 账户：
 
-  - 主邮箱（Google）：`mail1@google.com`
-  - 副邮箱（Microsoft）：`mail2@outlook.com`
+  - 主邮箱（Google）：`a@google.com`
+  - 副邮箱（Microsoft）：`b@outlook.com`
 
-  迁移后使用 `mail1@google.com` 重置密码，之后再用 `mail2@outlook.com` 登录将会**创建新用户**，而非关联到原有账户。
+  迁移后使用 `a@google.com` 重置密码，之后再用 `b@outlook.com` 登录将会**创建新用户**，而非关联到原有账户。
 </Callout>
 
 ![个人资料页 - 关联账号信息](https://hub-apac-1.lobeobjects.space/docs/43dfa498b82a58c9f99e805e88ea711a.png)
@@ -113,17 +115,11 @@ tags:
 <Callout type={'error'}>
   **重要说明**：
 
+  - **务必先备份数据库**！如使用 Neon，可通过 [Fork 分支](https://neon.tech/docs/manage/branches#create-a-branch) 创建备份
   - 迁移脚本需要 **clone 仓库后在本地运行**，不是在部署环境中执行
   - 由于迁移涉及用户数据，风险较高，**官方不提供部署时自动迁移功能**
+  - 请务必先使用 dry-run 模式测试脚本能够顺利运行再正式执行
   - 请务必在测试环境验证后再操作生产数据库
-</Callout>
-
-<Callout type={'warning'}>
-  **迁移前准备**：
-
-  - 使用 [Neon Fork 分支](https://neon.tech/docs/manage/branches#create-a-branch) 创建测试数据库
-  - 使用 Clerk Development 环境的 API 密钥
-  - 先在 test 模式下验证，确认成功后再切换到 prod 模式
 </Callout>
 
 ### 前置条件
@@ -282,34 +278,7 @@ npx tsx scripts/clerk-to-betterauth/verify.ts
 
 ### 步骤 7：配置 Better Auth 并重新部署
 
-迁移完成后，需要配置 Better Auth 环境变量并重新部署：
-
-1. **移除 Clerk 环境变量**：
-
-   ```bash
-   # 移除这些
-   # NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=xxx
-   # CLERK_SECRET_KEY=xxx
-   ```
-
-2. **添加 Better Auth 环境变量**：
-
-   ```bash
-   # 必需
-   AUTH_SECRET=your-secret-key  # openssl rand -base64 32
-
-   # 可选：配置 SSO 提供商（示例）
-   AUTH_SSO_PROVIDERS=google,github
-   AUTH_GOOGLE_ID=your-google-client-id
-   AUTH_GOOGLE_SECRET=your-google-client-secret
-   AUTH_GITHUB_ID=your-github-client-id
-   AUTH_GITHUB_SECRET=your-github-client-secret
-
-   # 可选：配置邮件服务（用于密码重置、邮箱验证等）
-   # 参阅身份验证服务配置文档了解详情
-   ```
-
-3. **重新部署 LobeChat**
+迁移完成后，参照 [简单迁移 - 步骤 2](#步骤) 配置 Better Auth 环境变量并重新部署。
 
 <Callout type={'tip'}>
   完整的 Better Auth 配置请参阅 [身份验证服务配置](/zh/docs/self-hosting/advanced/auth)，包括所有支持的 SSO 提供商和邮件服务配置。
@@ -327,6 +296,16 @@ npx tsx scripts/clerk-to-betterauth/verify.ts
 | 用户设置                    | ✅         | ✅    |
 
 ## 常见问题
+
+### 访问前清除浏览器数据
+
+迁移完成后，如果遇到登录问题，请先尝试清除浏览器的站点数据：
+
+1. 打开浏览器开发者工具（F12 或右键 → 检查）
+2. 进入 Application 标签页 → Storage → Clear site data
+3. 刷新页面后重试
+
+![清除浏览器站点数据](https://hub-apac-1.lobeobjects.space/docs/733c50ee2302e5daa3d99dc0739238c8.png)
 
 ### 迁移后用户无法登录
 
@@ -352,6 +331,8 @@ npx tsx scripts/clerk-to-betterauth/verify.ts
 ## 相关阅读
 
 <Cards>
+  <Card href={'/zh/docs/self-hosting/advanced/auth/migration-internals'} title={'迁移技术原理'} />
+
   <Card href={'/zh/docs/self-hosting/advanced/auth'} title={'身份验证服务配置'} />
 
   <Card href={'/zh/docs/self-hosting/environment-variables/auth'} title={'认证相关环境变量'} />

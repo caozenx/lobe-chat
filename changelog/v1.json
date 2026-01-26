@@ -1,5 +1,283 @@
 [
   {
+    "children": {},
+    "date": "2026-01-26",
+    "version": "2.0.0-next.382"
+  },
+  {
+    "children": {
+      "fixes": ["Fix cron job issue, fix share single message."]
+    },
+    "date": "2026-01-26",
+    "version": "2.0.0-next.381"
+  },
+  {
+    "children": {
+      "improvements": ["Update i18n."]
+    },
+    "date": "2026-01-26",
+    "version": "2.0.0-next.380"
+  },
+  {
+    "children": {
+      "fixes": [
+        "Fix update memory tools, resolve server version check issue for desktop app, slove the descktop use offical endpoint mcp not use stdio."
+      ]
+    },
+    "date": "2026-01-25",
+    "version": "2.0.0-next.379"
+  },
+  {
+    "children": {
+      "improvements": ["Improve popover trigger styles and component consistency."],
+      "fixes": ["Library cannot nav."]
+    },
+    "date": "2026-01-25",
+    "version": "2.0.0-next.378"
+  },
+  {
+    "children": {
+      "fixes": [
+        "Show fallback title for custom assistant in chat messages, webhook user service compatibility for old nextauth users."
+      ]
+    },
+    "date": "2026-01-25",
+    "version": "2.0.0-next.377"
+  },
+  {
+    "children": {
+      "improvements": ["Refactor search model implement."],
+      "fixes": ["Fix add message and improve local system tool."]
+    },
+    "date": "2026-01-25",
+    "version": "2.0.0-next.376"
+  },
+  {
+    "children": {
+      "fixes": ["Broadcast tools calling and improve auto scroll."]
+    },
+    "date": "2026-01-25",
+    "version": "2.0.0-next.375"
+  },
+  {
+    "children": {
+      "features": ["Update the discover page sort, add haveSkill、mostUsage params."],
+      "improvements": ["Update share action bar."]
+    },
+    "date": "2026-01-25",
+    "version": "2.0.0-next.374"
+  },
+  {
+    "children": {
+      "fixes": ["Slove group member plugin is lost & not use the plugins."]
+    },
+    "date": "2026-01-25",
+    "version": "2.0.0-next.373"
+  },
+  {
+    "children": {},
+    "date": "2026-01-25",
+    "version": "2.0.0-next.372"
+  },
+  {
+    "children": {},
+    "date": "2026-01-25",
+    "version": "2.0.0-next.371"
+  },
+  {
+    "children": {
+      "features": ["Support history context auto compress."]
+    },
+    "date": "2026-01-25",
+    "version": "2.0.0-next.370"
+  },
+  {
+    "children": {
+      "features": ["Add the agent/group profiles page the states and forked by tag."]
+    },
+    "date": "2026-01-24",
+    "version": "2.0.0-next.369"
+  },
+  {
+    "children": {
+      "features": ["Optimize profile editor."]
+    },
+    "date": "2026-01-24",
+    "version": "2.0.0-next.368"
+  },
+  {
+    "children": {
+      "fixes": ["Add cron pages enables change should reload the state."]
+    },
+    "date": "2026-01-24",
+    "version": "2.0.0-next.367"
+  },
+  {
+    "children": {
+      "fixes": ["Prevent recently viewed items from shrinking."]
+    },
+    "date": "2026-01-24",
+    "version": "2.0.0-next.366"
+  },
+  {
+    "children": {
+      "fixes": ["Docker deploy REDIS_URL check, fix sub task issue."]
+    },
+    "date": "2026-01-24",
+    "version": "2.0.0-next.365"
+  },
+  {
+    "children": {
+      "fixes": ["Fixed when windows withd low the protal will resize."]
+    },
+    "date": "2026-01-24",
+    "version": "2.0.0-next.364"
+  },
+  {
+    "children": {},
+    "date": "2026-01-24",
+    "version": "2.0.0-next.363"
+  },
+  {
+    "children": {
+      "fixes": ["Fix page selection not display correctly."]
+    },
+    "date": "2026-01-24",
+    "version": "2.0.0-next.362"
+  },
+  {
+    "children": {},
+    "date": "2026-01-24",
+    "version": "2.0.0-next.361"
+  },
+  {
+    "children": {
+      "fixes": ["Login success callback url error."]
+    },
+    "date": "2026-01-24",
+    "version": "2.0.0-next.360"
+  },
+  {
+    "children": {
+      "fixes": ["Surface streaming errors during mid-stream pulls."]
+    },
+    "date": "2026-01-24",
+    "version": "2.0.0-next.359"
+  },
+  {
+    "children": {},
+    "date": "2026-01-23",
+    "version": "2.0.0-next.358"
+  },
+  {
+    "children": {
+      "fixes": ["Page content switch mismatch."]
+    },
+    "date": "2026-01-23",
+    "version": "2.0.0-next.357"
+  },
+  {
+    "children": {
+      "features": ["Remove NextAuth."]
+    },
+    "date": "2026-01-23",
+    "version": "2.0.0-next.356"
+  },
+  {
+    "children": {
+      "fixes": ["Fix favorite refresh bug and group topic refresh issue."]
+    },
+    "date": "2026-01-23",
+    "version": "2.0.0-next.355"
+  },
+  {
+    "children": {
+      "improvements": ["Migrate AI Rules to Claude Code Skills."]
+    },
+    "date": "2026-01-23",
+    "version": "2.0.0-next.354"
+  },
+  {
+    "children": {},
+    "date": "2026-01-23",
+    "version": "2.0.0-next.353"
+  },
+  {
+    "children": {},
+    "date": "2026-01-23",
+    "version": "2.0.0-next.352"
+  },
+  {
+    "children": {
+      "fixes": ["Fix auto scroll."]
+    },
+    "date": "2026-01-23",
+    "version": "2.0.0-next.351"
+  },
+  {
+    "children": {},
+    "date": "2026-01-23",
+    "version": "2.0.0-next.350"
+  },
+  {
+    "children": {
+      "fixes": ["When use market group, the group sys role was not used."]
+    },
+    "date": "2026-01-23",
+    "version": "2.0.0-next.349"
+  },
+  {
+    "children": {
+      "fixes": [
+        "Fixed the agent group builder tools excaution edge case crash, fixed the group topic copy not right."
+      ]
+    },
+    "date": "2026-01-23",
+    "version": "2.0.0-next.348"
+  },
+  {
+    "children": {
+      "fixes": ["Add advace config back in agent/group profiles."],
+      "improvements": ["Move plugin store button outside scroll container."]
+    },
+    "date": "2026-01-23",
+    "version": "2.0.0-next.347"
+  },
+  {
+    "children": {},
+    "date": "2026-01-23",
+    "version": "2.0.0-next.346"
+  },
+  {
+    "children": {
+      "features": ["Remove Clerk authentication code."],
+      "fixes": ["Slove the agents header switch agents the lobeAI not show problem."],
+      "improvements": ["Improve auto scroll and group profile."]
+    },
+    "date": "2026-01-23",
+    "version": "2.0.0-next.345"
+  },
+  {
+    "children": {
+      "fixes": ["Fixed the sandbox tools call when error should use right callback."]
+    },
+    "date": "2026-01-23",
+    "version": "2.0.0-next.344"
+  },
+  {
+    "children": {
+      "improvements": ["Update share style."],
+      "fixes": ["Fix scope issue."]
+    },
+    "date": "2026-01-23",
+    "version": "2.0.0-next.343"
+  },
+  {
+    "children": {},
+    "date": "2026-01-22",
+    "version": "2.0.0-next.342"
+  },
+  {
     "children": {
       "features": ["Add server version check for desktop app."]
     },
